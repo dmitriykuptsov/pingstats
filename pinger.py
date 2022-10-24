@@ -37,6 +37,8 @@ from logging.handlers import RotatingFileHandler
 import time
 # System
 import sys
+# Copy operation
+import copy
 # Exit handler
 import atexit
 # Import mathematics
@@ -65,6 +67,7 @@ logging.basicConfig(
 );
 
 hosts = misc.Misc.load_hosts("./config/hosts");
+logging.info(hosts)
 config = misc.Misc.load_config("./config/config");
 
 source_address = config["SOURCE_ADDRESS"]
@@ -82,21 +85,30 @@ lock = 0;
 storage = CyclicStorage.CyclicStorage(MAX_RECORDS)
 logging.info("Starting PINGer");
 
+
+# Thread lock
+
+lock = threading.Lock()
+
 for host in hosts:
     sequences[host] = 1;
 
 def maintanance_loop():
     while True:
         c = time.time()
-        for host in hosts:
-            if host in pending_requests.keys():
-                if c - pending_requests[host] > MAX_TIMEOUT:
-                    logging.info("No response for host %s " % (host))
-                    storage.put(host, math.inf, c);
-                    try:
-                        del pending_requests[host];
-                    except:
-                        pass
+        lock.acquire()
+        keys = []
+        for key in pending_requests.keys():
+            keys.append(key)
+        for host in keys:
+            if c - pending_requests[host] > MAX_TIMEOUT:
+                logging.info("No response for host %s " % (host))
+                storage.put(host, math.inf, c);
+                try: 
+                    del pending_requests[host];
+                except:
+                    pass
+        lock.release()
         time.sleep(MAIN_SLEEP_TIME);
     
 def send_loop():
@@ -124,11 +136,12 @@ def send_loop():
             ipv4_packet.set_payload(icmp_echo_packet.get_byte_buffer());
 
             icmp_socket.sendto(bytearray(ipv4_packet.get_buffer()), (host, 0));
+            logging.info("Sending to %s" % (host))
+            lock.acquire()
             pending_requests[host + "_" + str(sequences[host])] = s
             sequences[host] += 1
             sequences[host] = sequences[host] % MAX_SEQUENCE;
-
-
+            lock.release()
         time.sleep(PROBE_INTERVAL)
 
 def receive_loop():
@@ -153,7 +166,9 @@ def receive_loop():
                 storage.put(host, (c - pending_requests[key]), c);
                 try:
                     # Remove unused pending request
+                    lock.acquire()
                     del pending_requests[key]
+                    lock.release()
                 except:
                     pass
             else:
