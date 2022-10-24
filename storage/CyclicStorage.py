@@ -27,8 +27,18 @@ class CyclicStorage():
         self.counters[key] = self.counters[key] % self.max_records;
     def set_counter(self, key, counter):
         self.counters[key] = counter;
+    def get_counter(self, key):
+        return self.counters[key]
+    def get_max_records(self):
+        return self.max_records
     def get_all(self, key):
-        return self.storage[key];
+        arr = self.storage[key];
+        start = self.counters[key]
+        output = []
+        for i in range(start, start + self.max_records):
+            j = i % self.max_records
+            output.append(arr[j])
+        return output
     def get_slice(self, key, start, end):
         if start < 0 or start > end:
             raise Exception("Invalid index")
