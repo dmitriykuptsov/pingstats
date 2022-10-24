@@ -168,9 +168,10 @@ def receive_loop():
                     # Remove unused pending request
                     lock.acquire()
                     del pending_requests[key]
-                    lock.release()
                 except:
                     pass
+                finally:
+                    lock.release()
             else:
                 logging.debug("Unsupported ICMP response")
 
