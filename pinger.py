@@ -163,7 +163,11 @@ def receive_loop():
                 key = host + "_" + str(icmp_packet.get_sequence())
                 logging.info("Got ICMP echo reply (seq %s) from %s in %s ms" % (sequences[host], host, (c-pending_requests[key])))
                 #logging.debug(pending_requests.keys())
-                storage.put(host, (c - pending_requests[key]), c);
+                try:
+                    # It might be so that the ICMP repsonse is too late and we don't have the record in db any more
+                    storage.put(host, (c - pending_requests[key]), c);
+                except:
+                    pass
                 lock.acquire()
                 try:
                     # Remove unused pending request
