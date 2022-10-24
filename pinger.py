@@ -164,14 +164,13 @@ def receive_loop():
                 logging.info("Got ICMP echo reply (seq %s) from %s in %s ms" % (sequences[host], host, (c-pending_requests[key])))
                 #logging.debug(pending_requests.keys())
                 storage.put(host, (c - pending_requests[key]), c);
+                lock.acquire()
                 try:
                     # Remove unused pending request
-                    lock.acquire()
                     del pending_requests[key]
                 except:
                     pass
-                finally:
-                    lock.release()
+                lock.release()
             else:
                 logging.debug("Unsupported ICMP response")
 
