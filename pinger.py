@@ -64,7 +64,6 @@ logging.basicConfig(
 	]
 );
 
-
 hosts = misc.Misc.load_hosts("./config/hosts");
 config = misc.Misc.load_config("./config/config");
 
