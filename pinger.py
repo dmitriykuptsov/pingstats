@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright (C) 2019 micromine
+# Copyright (C) 2019 Micromine
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -29,17 +29,22 @@ from network import IPv4
 # Import socket
 import socket
 # Threading
+import threading
 # Logging
 import logging
+from logging.handlers import RotatingFileHandler
 # Timing
 import time
 # System
 import sys
 # Exit handler
 import atexit
+# Import mathematics
+import math
 # Import utilities
 from utils import checksum
 from utils import conversions
+from storage import CyclicStorage
 
 # Define MTU
 MTU = 1500
@@ -50,62 +55,121 @@ icmp_socket.bind(("0.0.0.0", ICMP.ICMP_PROTOCOL_NUMBER));
 icmp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1);
 
 logging.basicConfig(
-	level=logging.DEBUG,
+	level=logging.INFO,
 	format="%(asctime)s [%(levelname)s] %(message)s",
 	handlers=[
-		logging.FileHandler("pingstats.log"),
+		RotatingFileHandler("pingstats.log", maxBytes=20*1024*1024, backupCount=5),
 		logging.StreamHandler(sys.stdout)
 	]
 );
 
+source_address = "192.168.1.225"
+hosts = ["192.168.1.1", "192.168.1.137", "192.168.1.13"]
+
+MAIN_SLEEP_TIME = 1;
+MAX_TIMEOUT = 2; # 2 seconds
+PROBE_INTERVAL = 5; # 5 seconds
 MAX_SEQUENCE = 2**16 - 1;
-seq = 1;
-while True:
-    s = time.time()
-    icmp_echo_packet = ICMP.ICMPEchoPacket();
-    icmp_echo_packet.set_type(ICMP.ICMP_ECHO_TYPE);
-    icmp_echo_packet.set_code(ICMP.ICMP_ECHO_CODE);
-    icmp_echo_packet.set_checksum(0);
-    icmp_echo_packet.set_identifier(1);
-    icmp_echo_packet.set_sequence(seq % MAX_SEQUENCE);
-    icmp_echo_packet.set_payload(bytearray([ord('H'), ord('E'), ord('L'), ord('L'), ord('O'), ord(' '), ord('P'), ord('I'), ord('T'), ord('R'), ord('A'), ord('M')]));
+MAX_RECORDS = int(24 * 60 * 60 / 5);
+REPORT_INTERVAL = 10; # 10 seconds between reports
 
-    csum = checksum.Checksum.icmp_checksum(icmp_echo_packet.get_byte_buffer())
-    icmp_echo_packet.set_checksum(csum);
+sequences = {}
+pending_requests = {}
+lock = 0;
 
-    ipv4_packet = IPv4.IPv4Packet();
-    ipv4_packet.set_version(IPv4.IPV4_VERSION);
-    ipv4_packet.set_destination_address(conversions.Converter.ipv_str_to_bytes("192.168.1.1"));
-    ipv4_packet.set_source_address(conversions.Converter.ipv_str_to_bytes("192.168.1.225"));
-    ipv4_packet.set_ttl(IPv4.IPV4_DEFAULT_TTL);
-    ipv4_packet.set_protocol(ICMP.ICMP_PROTOCOL_NUMBER);
-    ipv4_packet.set_ihl(IPv4.IPV4_IHL_NO_OPTIONS);
+storage = CyclicStorage.CyclicStorage(MAX_RECORDS)
+logging.info("Starting PINGer");
 
-    ipv4_packet.set_payload(icmp_echo_packet.get_byte_buffer());
-    icmp_socket.sendto(bytearray(ipv4_packet.get_buffer()), ("192.168.1.1", 0));
+for host in hosts:
+    sequences[host] = 1;
 
-    buf = bytearray(icmp_socket.recv(MTU));
-    ipv4_packet = IPv4.IPv4Packet(buf);
-    e = time.time()
+def maintanance_loop():
+    while True:
+        c = time.time()
+        for host in hosts:
+            if host in pending_requests.keys():
+                if c - pending_requests[host] > MAX_TIMEOUT:
+                    logging.info("No response for host %s " % (host))
+                    storage.put(host, math.inf, c);
+                    try:
+                        del pending_requests[host];
+                    except:
+                        pass
+        time.sleep(MAIN_SLEEP_TIME);
     
-    if ipv4_packet.get_protocol() == ICMP.ICMP_PROTOCOL_NUMBER:
-        icmp_packet = ICMP.ICMPPacketFactory.get_packet(ipv4_packet.get_payload())
-        checksum_ = icmp_packet.get_checksum()
-        icmp_packet.set_checksum(0);
-        #logging.debug((icmp_packet.get_byte_buffer()))
-        #logging.debug("Got ICMP packet type %s" % (icmp_packet.get_type()))
-        if not checksum.Checksum.verify_icmp_checksum(icmp_packet.get_byte_buffer(), checksum_):
-            logging.debug("Invalid checksum received")
-            time.sleep(1)
-            continue;
-        if icmp_packet.get_type() == ICMP.ICMP_DESTINATION_UNREACHABLE_TYPE:
-            logging.debug("Destination unreachable 192.168.1.10");
-        elif icmp_packet.get_type() == ICMP.ICMP_ECHO_REPLY_TYPE:
-            logging.debug("Got ICMP echo reply (seq %s) from 192.168.1.10 in %s ms" % (seq, (e-s)))
-        else:
-            logging.debug("Unsupported ICMP response")
-    seq += 1
-    time.sleep(1)
+def send_loop():
+    while True:
+        for host in hosts:
+            s = time.time()
 
+            icmp_echo_packet = ICMP.ICMPEchoPacket();
+            icmp_echo_packet.set_type(ICMP.ICMP_ECHO_TYPE);
+            icmp_echo_packet.set_code(ICMP.ICMP_ECHO_CODE);
+            icmp_echo_packet.set_checksum(0);
+            icmp_echo_packet.set_identifier(1);
+            icmp_echo_packet.set_sequence(sequences[host] % MAX_SEQUENCE);
+            icmp_echo_packet.set_payload(bytearray([ord('H'), ord('E'), ord('L'), ord('L'), ord('O'), ord(' '), ord('P'), ord('I'), ord('T'), ord('R'), ord('A'), ord('M')]));
+            csum = checksum.Checksum.icmp_checksum(icmp_echo_packet.get_byte_buffer())
+            icmp_echo_packet.set_checksum(csum);
 
+            ipv4_packet = IPv4.IPv4Packet();
+            ipv4_packet.set_version(IPv4.IPV4_VERSION);
+            ipv4_packet.set_destination_address(conversions.Converter.ipv_str_to_bytes(host));
+            ipv4_packet.set_source_address(conversions.Converter.ipv_str_to_bytes(source_address));
+            ipv4_packet.set_ttl(IPv4.IPV4_DEFAULT_TTL);
+            ipv4_packet.set_protocol(ICMP.ICMP_PROTOCOL_NUMBER);
+            ipv4_packet.set_ihl(IPv4.IPV4_IHL_NO_OPTIONS);
+            ipv4_packet.set_payload(icmp_echo_packet.get_byte_buffer());
 
+            icmp_socket.sendto(bytearray(ipv4_packet.get_buffer()), (host, 0));
+            sequences[host] += 1
+            sequences[host] = sequences[host] % MAX_SEQUENCE;
+            pending_requests[host] = s
+
+        time.sleep(PROBE_INTERVAL)
+
+def receive_loop():
+    while True:
+        buf = bytearray(icmp_socket.recv(MTU));
+        c = time.time()
+        ipv4_packet = IPv4.IPv4Packet(buf);
+        host = conversions.Converter.ipv4_bytes_to_string(ipv4_packet.get_source_address())
+        if ipv4_packet.get_protocol() == ICMP.ICMP_PROTOCOL_NUMBER:
+            icmp_packet = ICMP.ICMPPacketFactory.get_packet(ipv4_packet.get_payload())
+            checksum_ = icmp_packet.get_checksum()
+            icmp_packet.set_checksum(0);
+            if not checksum.Checksum.verify_icmp_checksum(icmp_packet.get_byte_buffer(), checksum_):
+                logging.debug("Invalid checksum received")
+            elif icmp_packet.get_type() == ICMP.ICMP_DESTINATION_UNREACHABLE_TYPE:
+                logging.debug("Destination unreachable %s" % (host));
+                storage.put(host, math.inf, c);
+            elif icmp_packet.get_type() == ICMP.ICMP_ECHO_REPLY_TYPE:
+                logging.info("Got ICMP echo reply (seq %s) from %s in %s ms" % (sequences[host], host, (c-pending_requests[host]) * 1000))
+                logging.debug(pending_requests.keys())
+                storage.put(host, (c - pending_requests[host]) * 1000, c);
+            else:
+                logging.debug("Unsupported ICMP response")
+            try:
+                # Remove unused pending request
+                del pending_requests[host]
+            except:
+                pass
+
+def report_loop():
+    while True:
+        for host in hosts:
+            try:
+                logging.info("Last value for host %s: %s" % (host, storage.get_last(host)[1]))
+            except:
+                pass
+        time.sleep(REPORT_INTERVAL)
+
+send_thread = threading.Thread(target = send_loop, args = (), daemon = True);
+receive_thread = threading.Thread(target = receive_loop, args = (), daemon = True);
+report_thread = threading.Thread(target = report_loop, args = (), daemon = True);
+
+send_thread.start();
+receive_thread.start();
+report_thread.start();
+
+maintanance_loop();
