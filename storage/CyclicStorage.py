@@ -1,3 +1,19 @@
+#!/usr/bin/python3
+
+# Copyright (C) 2019 Micromine
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 class CyclicStorage():
     def __init__(self, max_records = 1000):
         self.max_records = max_records;
@@ -5,7 +21,7 @@ class CyclicStorage():
         self.counters = {}
     def put(self, key, value, timestamp):
         if key not in self.storage.keys():
-            self.storage[key] = [None] * self.max_records;
+            self.storage[key] = [None] * int(self.max_records);
             self.counters[key] = 0;
         self.storage[key][self.counters[key] % self.max_records] = (timestamp, value)
         self.counters[key] = self.counters[key] % self.max_records;
