@@ -45,7 +45,8 @@ import math
 from utils import checksum
 from utils import conversions
 from storage import CyclicStorage
-
+# Import mics
+from utils import misc
 # Define MTU
 MTU = 1500
 
@@ -63,15 +64,17 @@ logging.basicConfig(
 	]
 );
 
-source_address = "192.168.1.225"
-hosts = ["192.168.1.1", "192.168.1.137", "192.168.1.13"]
 
-MAIN_SLEEP_TIME = 1;
-MAX_TIMEOUT = 2; # 2 seconds
-PROBE_INTERVAL = 5; # 5 seconds
-MAX_SEQUENCE = 2**16 - 1;
-MAX_RECORDS = int(24 * 60 * 60 / 5);
-REPORT_INTERVAL = 10; # 10 seconds between reports
+hosts = misc.Misc.load_hosts("./config/hosts");
+config = misc.Misc.load_config("./config/config");
+
+source_address = config["SOURCE_ADDRESS"]
+MAIN_SLEEP_TIME = int(config["MAIN_SLEEP_TIME"])
+MAX_TIMEOUT = int(config["MAX_TIMEOUT"])
+PROBE_INTERVAL = int(config["PROBE_INTERVAL"])
+MAX_SEQUENCE = int(config["MAX_SEQUENCE"])
+MAX_RECORDS = int(config["MAX_RECORDS"])
+REPORT_INTERVAL = int(config["REPORT_INTERVAL"])
 
 sequences = {}
 pending_requests = {}
