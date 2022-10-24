@@ -124,9 +124,10 @@ def send_loop():
             ipv4_packet.set_payload(icmp_echo_packet.get_byte_buffer());
 
             icmp_socket.sendto(bytearray(ipv4_packet.get_buffer()), (host, 0));
+            pending_requests[host + "_" + str(sequences[host])] = s
             sequences[host] += 1
             sequences[host] = sequences[host] % MAX_SEQUENCE;
-            pending_requests[host] = s
+
 
         time.sleep(PROBE_INTERVAL)
 
@@ -146,16 +147,18 @@ def receive_loop():
                 logging.debug("Destination unreachable %s" % (host));
                 storage.put(host, math.inf, c);
             elif icmp_packet.get_type() == ICMP.ICMP_ECHO_REPLY_TYPE:
-                logging.info("Got ICMP echo reply (seq %s) from %s in %s ms" % (sequences[host], host, (c-pending_requests[host]) * 1000))
-                logging.debug(pending_requests.keys())
-                storage.put(host, (c - pending_requests[host]) * 1000, c);
+                key = host + "_" + str(icmp_packet.get_sequence())
+                logging.info("Got ICMP echo reply (seq %s) from %s in %s ms" % (sequences[host], host, (c-pending_requests[key])))
+                #logging.debug(pending_requests.keys())
+                storage.put(host, (c - pending_requests[key]), c);
+                try:
+                    # Remove unused pending request
+                    del pending_requests[key]
+                except:
+                    pass
             else:
                 logging.debug("Unsupported ICMP response")
-            try:
-                # Remove unused pending request
-                del pending_requests[host]
-            except:
-                pass
+
 
 def report_loop():
     while True:
