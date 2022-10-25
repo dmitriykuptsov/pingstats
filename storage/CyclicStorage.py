@@ -13,6 +13,8 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import gc
+import math
 
 class CyclicStorage():
     def __init__(self, max_records = 1000):
@@ -21,9 +23,12 @@ class CyclicStorage():
         self.counters = {}
     def put(self, key, value, timestamp):
         if key not in self.storage.keys():
-            self.storage[key] = [(None, None)] * int(self.max_records);
+            self.storage[key] = [[None, math.inf]] * int(self.max_records);
             self.counters[key] = 0;
-        self.storage[key][self.counters[key] % self.max_records] = (timestamp, value)
+        v = self.storage[key][self.counters[key] % self.max_records][0]
+        t = self.storage[key][self.counters[key] % self.max_records][1]
+        self.storage[key][self.counters[key] % self.max_records][0] = timestamp
+        self.storage[key][self.counters[key] % self.max_records][1] = value
         self.counters[key] = self.counters[key] % self.max_records;
     def set_counter(self, key, counter):
         self.counters[key] = counter;

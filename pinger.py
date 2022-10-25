@@ -65,7 +65,7 @@ icmp_socket.bind(("0.0.0.0", ICMP.ICMP_PROTOCOL_NUMBER));
 icmp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1);
 
 logging.basicConfig(
-	level=logging.INFO,
+	level=logging.CRITICAL,
 	format="%(asctime)s [%(levelname)s] %(message)s",
 	handlers=[
 		RotatingFileHandler("pingstats.log", maxBytes=20*1024*1024, backupCount=5),
@@ -103,6 +103,7 @@ for host in hosts:
     storage.put(host, math.inf, c);
 
 def maintanance_loop():
+    gc.enable()
     while True:
         c = time.time()
         lock.acquire()
@@ -111,8 +112,8 @@ def maintanance_loop():
             keys.append(key)
         for host in keys:
             if c - pending_requests[host] > MAX_TIMEOUT:
-                logging.info("No response for host %s " % (host))
-                storage.put(host, math.inf, c);
+                #logging.info("No response for host %s " % (host))
+                storage.put(host.split("_")[0], math.inf, c);
                 try: 
                     del pending_requests[host];
                 except:
@@ -154,6 +155,7 @@ def send_loop():
         time.sleep(PROBE_INTERVAL)
 
 def receive_loop():
+    gc.enable()
     while True:
         buf = bytearray(icmp_socket.recv(MTU));
         c = time.time()
@@ -176,6 +178,7 @@ def receive_loop():
                 try:
                     # It might be so that the ICMP repsonse is too late and we don't have the record in db any more
                     storage.put(host, (c - pending_requests[key])*1000, c);
+                    pass
                 except:
                     pass
                 lock.acquire()
@@ -188,12 +191,12 @@ def receive_loop():
             else:
                 logging.debug("Unsupported ICMP response")
 
-
 def report_loop():
     while True:
         for host in hosts:
             try:
                 logging.info("Last value for host %s: %s" % (host, storage.get_last(host)[1]))
+                pass
             except:
                 pass
         time.sleep(REPORT_INTERVAL)
@@ -201,6 +204,7 @@ def report_loop():
 def gui_loop():
     window = ui.Main(storage)
     window.show();
+
 
 send_thread = threading.Thread(target = send_loop, args = (), daemon = True);
 receive_thread = threading.Thread(target = receive_loop, args = (), daemon = True);
@@ -211,5 +215,4 @@ send_thread.start();
 receive_thread.start();
 report_thread.start();
 maintenance_thread.start();
-
 gui_loop();
