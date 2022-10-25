@@ -65,7 +65,7 @@ icmp_socket.bind(("0.0.0.0", ICMP.ICMP_PROTOCOL_NUMBER));
 icmp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1);
 
 logging.basicConfig(
-	level=logging.CRITICAL,
+	level=logging.DEBUG,
 	format="%(asctime)s [%(levelname)s] %(message)s",
 	handlers=[
 		RotatingFileHandler("pingstats.log", maxBytes=20*1024*1024, backupCount=5),
@@ -103,7 +103,6 @@ for host in hosts:
     storage.put(host, math.inf, c);
 
 def maintanance_loop():
-    gc.enable()
     while True:
         c = time.time()
         lock.acquire()
@@ -155,7 +154,6 @@ def send_loop():
         time.sleep(PROBE_INTERVAL)
 
 def receive_loop():
-    gc.enable()
     while True:
         buf = bytearray(icmp_socket.recv(MTU));
         c = time.time()

@@ -42,25 +42,25 @@ class Main():
         self.storage = storage
         self.keys = self.storage.get_all_keys();
         self.labels = {}
-        self._MAX_COLS = 5
+        self._MAX_COLS = 7
 
     def update(self, window = None):
-        
-        for key in self.keys:
-            statuslbl = self.labels[key]
-            t = self.storage.get_last(key)
-            if self.storage.get_last(key)[1] != math.inf:
-                try:
-                    statuslbl["text"] = "Online " + str(round(t[1], 2))
-                except:
-                    pass
-                statuslbl["bg"] = "#00FF00"
-            else:
-                statuslbl["text"] = "Offline"
-                statuslbl["bg"] = "#FF0000"
-        
-        time.sleep(__REFRESH_RATE__)
-        self.window.update()
+        while True:
+            for key in self.keys:
+                statuslbl = self.labels[key]
+                t = self.storage.get_last(key)
+                if self.storage.get_last(key)[1] != math.inf:
+                    try:
+                        statuslbl["text"] = "Online " + str(round(t[1], 2))
+                    except:
+                        pass
+                    statuslbl["bg"] = "#00FF00"
+                else:
+                    statuslbl["text"] = "Offline"
+                    statuslbl["bg"] = "#FF0000"
+            
+            time.sleep(__REFRESH_RATE__)
+            self.window.update()
 
     def showMTBFGraph(self, key):
         values = self.storage.get_all(key)
@@ -79,30 +79,30 @@ class Main():
         for key in self.keys:
             if start:
                 lbl = Label(self.window, text = "Host")
-                lbl.grid(row = 0, column = col_index % 15)
-                lbl = Label(self.window, text = "Show MTBF plot")
-                lbl.grid(row = 0, column = (col_index + 1) % 15)
+                lbl.grid(row = 0, column = col_index % 14)
+                #lbl = Label(self.window, text = "Show MTBF plot")
+                #lbl.grid(row = 0, column = (col_index + 1) % 14)
                 lbl = Label(self.window, text = "Status")
-                lbl.grid(row = 0, column = (col_index + 2) % 15)
+                lbl.grid(row = 0, column = (col_index + 1) % 14)
             hostlbl = Label(self.window, text = key)
-            hostlbl.grid(row=row_index, column=col_index % 15)
-            btn = Button(self.window, text = "Show MTBF distribution", command = lambda : self.showMTBFGraph(key))
-            btn.grid(row=row_index, column=(col_index + 1) % 15)
+            hostlbl.grid(row=row_index, column=col_index % 14)
+            #btn = Button(self.window, text = "Show MTBF distribution", command = lambda : self.showMTBFGraph(key))
+            #btn.grid(row=row_index, column=(col_index + 1) % 15)
             
             if self.storage.get_last(key)[1] != math.inf:
                 statuslbl = Label(self.window, bg='#00FF00', text = "Online " + str(round(self.storage.get_last(key)[1], 2)))
                 #statuslbl = Label(self.window, bg='#00FF00', text = "Online")
-                statuslbl.grid(row = row_index, column = (col_index + 2) % 15)
+                statuslbl.grid(row = row_index, column = (col_index + 1) % 14)
                 self.labels[key] = statuslbl
             else:
                 statuslbl = Label(self.window, bg='#FF0000', text = "Offline")
-                statuslbl.grid(row = row_index, column = (col_index + 2) % 15)
+                statuslbl.grid(row = row_index, column = (col_index + 1) % 14)
                 self.labels[key] = statuslbl
             
             if row_index > 1:
                 start = False
-            col_index += 3
-            if col_index % 15 == 0 and col_index != 0:
+            col_index += 2
+            if col_index % 14 == 0 and col_index != 0:
                 row_index += 1
         redraw_thread = threading.Thread(target = self.update, args = (), daemon = True);
         redraw_thread.start();
