@@ -21,7 +21,7 @@ class CyclicStorage():
         self.counters = {}
     def put(self, key, value, timestamp):
         if key not in self.storage.keys():
-            self.storage[key] = [None] * int(self.max_records);
+            self.storage[key] = [(None, None)] * int(self.max_records);
             self.counters[key] = 0;
         self.storage[key][self.counters[key] % self.max_records] = (timestamp, value)
         self.counters[key] = self.counters[key] % self.max_records;
@@ -47,6 +47,11 @@ class CyclicStorage():
         return self.storage[key][start:end];
     def get_last(self, key):
         return self.storage[key][self.counters[key] % self.max_records]
+    def get_all_keys(self):
+        keys = []
+        for key in self.storage.keys():
+            keys.append(key)
+        return keys
     def dump_to_file(self, file):
         fh = open(file, "w+")
         fh.writeline(self.max_records)

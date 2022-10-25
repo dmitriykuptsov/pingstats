@@ -34,6 +34,8 @@ class Statistics():
         gapStart = None
         stats = []
         for (timestamp, value) in values:
+            if timestamp == None or value == None:
+                continue;
             if start:
                 start = False
                 prevTimestamp = timestamp

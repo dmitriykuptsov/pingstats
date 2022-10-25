@@ -49,8 +49,15 @@ from utils import conversions
 from storage import CyclicStorage
 # Import mics
 from utils import misc
+# Import GUI
+from ui import ui
+# impport garbage collector
+import gc
+
 # Define MTU
 MTU = 1500
+
+gc.enable()
 
 # Create the ICMP socket
 icmp_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, ICMP.ICMP_PROTOCOL_NUMBER);
@@ -90,8 +97,10 @@ logging.info("Starting PINGer");
 
 lock = threading.Lock()
 
+c = time.time();
 for host in hosts:
     sequences[host] = 1;
+    storage.put(host, math.inf, c);
 
 def maintanance_loop():
     while True:
@@ -158,14 +167,15 @@ def receive_loop():
                 logging.debug("Invalid checksum received")
             elif icmp_packet.get_type() == ICMP.ICMP_DESTINATION_UNREACHABLE_TYPE:
                 logging.debug("Destination unreachable %s" % (host));
-                storage.put(host, math.inf, c);
+                #storage.put(host, math.inf, c);
             elif icmp_packet.get_type() == ICMP.ICMP_ECHO_REPLY_TYPE:
                 key = host + "_" + str(icmp_packet.get_sequence())
-                logging.info("Got ICMP echo reply (seq %s) from %s in %s ms" % (sequences[host], host, (c-pending_requests[key])))
+                
+                logging.info("Got ICMP echo reply (seq %s) from %s in %s ms" % (sequences[host], host, (c-pending_requests.get(key, 0))))
                 #logging.debug(pending_requests.keys())
                 try:
                     # It might be so that the ICMP repsonse is too late and we don't have the record in db any more
-                    storage.put(host, (c - pending_requests[key]), c);
+                    storage.put(host, (c - pending_requests[key])*1000, c);
                 except:
                     pass
                 lock.acquire()
@@ -188,12 +198,18 @@ def report_loop():
                 pass
         time.sleep(REPORT_INTERVAL)
 
+def gui_loop():
+    window = ui.Main(storage)
+    window.show();
+
 send_thread = threading.Thread(target = send_loop, args = (), daemon = True);
 receive_thread = threading.Thread(target = receive_loop, args = (), daemon = True);
 report_thread = threading.Thread(target = report_loop, args = (), daemon = True);
+maintenance_thread = threading.Thread(target = maintanance_loop, args = (), daemon = True);
 
 send_thread.start();
 receive_thread.start();
 report_thread.start();
+maintenance_thread.start();
 
-maintanance_loop();
+gui_loop();
