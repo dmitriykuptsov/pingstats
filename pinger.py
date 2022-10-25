@@ -111,7 +111,7 @@ def maintanance_loop():
             keys.append(key)
         for host in keys:
             if c - pending_requests[host] > MAX_TIMEOUT:
-                #logging.info("No response for host %s " % (host))
+                logging.info("No response for host %s " % (host))
                 storage.put(host.split("_")[0], math.inf, c);
                 try: 
                     del pending_requests[host];
@@ -173,18 +173,18 @@ def receive_loop():
                 
                 logging.info("Got ICMP echo reply (seq %s) from %s in %s ms" % (sequences[host], host, (c-pending_requests.get(key, 0))))
                 #logging.debug(pending_requests.keys())
+                lock.acquire()
                 try:
                     # It might be so that the ICMP repsonse is too late and we don't have the record in db any more
                     storage.put(host, (c - pending_requests[key])*1000, c);
-                    pass
-                except:
-                    pass
-                lock.acquire()
+                except Exception as e:
+                    logging.critical("Got exception while storing the readings %s %s" % (key, str(e)))
+                
                 try:
                     # Remove unused pending request
                     del pending_requests[key]
                 except:
-                    pass
+                    logging.critical("Got exception while removing old reading %s %s" % (key, str(e)))
                 lock.release()
             else:
                 logging.debug("Unsupported ICMP response")
