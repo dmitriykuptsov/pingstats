@@ -94,7 +94,6 @@ logging.info("Starting PINGer");
 
 
 # Thread lock
-
 lock = threading.Lock()
 
 c = time.time();
@@ -105,23 +104,23 @@ for host in hosts:
 def maintanance_loop():
     while True:
         c = time.time()
+        logging.debug("Cleaning pending requests....")
         lock.acquire()
         keys = []
         for key in pending_requests.keys():
             keys.append(key)
-        for host in keys:
-            if c - pending_requests[host] > MAX_TIMEOUT:
-                logging.info("No response for host %s " % (host))
-                storage.put(host.split("_")[0], math.inf, c);
-                try: 
-                    del pending_requests[host];
-                except:
-                    pass
+        keys.sort()
+        for key in keys:
+            if c - pending_requests[key] > MAX_TIMEOUT:
+                logging.info("No response for host %s " % (key))
+                storage.put(key.split("_")[0], math.inf, c);
+                del pending_requests[key];
         lock.release()
         time.sleep(MAIN_SLEEP_TIME);
     
 def send_loop():
     while True:
+        logging.debug("Sending ICMP packets.....")
         for host in hosts:
             s = time.time()
 
@@ -159,10 +158,12 @@ def receive_loop():
         c = time.time()
         ipv4_packet = IPv4.IPv4Packet(buf);
         host = conversions.Converter.ipv4_bytes_to_string(ipv4_packet.get_source_address())
+        logging.debug("Got IPv4 packet....")
         if ipv4_packet.get_protocol() == ICMP.ICMP_PROTOCOL_NUMBER:
             icmp_packet = ICMP.ICMPPacketFactory.get_packet(ipv4_packet.get_payload())
             checksum_ = icmp_packet.get_checksum()
             icmp_packet.set_checksum(0);
+            #logging.info("Got ICMP echo reply (seq %s)" % (str(icmp_packet.get_sequence())))
             if not checksum.Checksum.verify_icmp_checksum(icmp_packet.get_byte_buffer(), checksum_):
                 logging.debug("Invalid checksum received")
             elif icmp_packet.get_type() == ICMP.ICMP_DESTINATION_UNREACHABLE_TYPE:
@@ -170,34 +171,25 @@ def receive_loop():
                 #storage.put(host, math.inf, c);
             elif icmp_packet.get_type() == ICMP.ICMP_ECHO_REPLY_TYPE:
                 key = host + "_" + str(icmp_packet.get_sequence())
-                
-                logging.info("Got ICMP echo reply (seq %s) from %s in %s ms" % (sequences[host], host, (c-pending_requests.get(key, 0))))
-                #logging.debug(pending_requests.keys())
                 lock.acquire()
-                try:
-                    # It might be so that the ICMP repsonse is too late and we don't have the record in db any more
+                if pending_requests.get(key, None) == None:
+                    logging.critical("No key was found.... Deleted?..... %s" % (key))
+                    lock.release();    
+                    continue
+                logging.info("Got ICMP echo reply (seq %s) from %s in %s ms" % (sequences[host], host, (c-pending_requests.get(key, 0))))
+                # It might be so that the ICMP repsonse is too late and we don't have the record in db any more
+                if pending_requests.get(key, None) != None:
+                    logging.critical("Updating the storage....")
                     storage.put(host, (c - pending_requests[key])*1000, c);
-                except Exception as e:
-                    logging.critical("Got exception while storing the readings %s %s" % (key, str(e)))
-                
-                try:
-                    # Remove unused pending request
+                else:
+                    logging.debug("Missing key %s" % (key))
+                # Remove unused pending request
+                if pending_requests.get(key, None) != None:
                     del pending_requests[key]
-                except:
-                    logging.critical("Got exception while removing old reading %s %s" % (key, str(e)))
+                    logging.critical("Deleting pending request %s " % (key))
                 lock.release()
             else:
                 logging.debug("Unsupported ICMP response")
-
-def report_loop():
-    while True:
-        for host in hosts:
-            try:
-                logging.info("Last value for host %s: %s" % (host, storage.get_last(host)[1]))
-                pass
-            except:
-                pass
-        time.sleep(REPORT_INTERVAL)
 
 def gui_loop():
     window = ui.Main(storage)
@@ -206,11 +198,9 @@ def gui_loop():
 
 send_thread = threading.Thread(target = send_loop, args = (), daemon = True);
 receive_thread = threading.Thread(target = receive_loop, args = (), daemon = True);
-report_thread = threading.Thread(target = report_loop, args = (), daemon = True);
 maintenance_thread = threading.Thread(target = maintanance_loop, args = (), daemon = True);
 
 send_thread.start();
 receive_thread.start();
-report_thread.start();
 maintenance_thread.start();
 gui_loop();

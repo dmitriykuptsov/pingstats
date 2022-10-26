@@ -402,7 +402,7 @@ class ICMPEchoPacket(ICMPPacket):
         """
         Gets the ICMP Echo sequence
         """
-        return (((self.buffer[ICMP_ECHO_SEQUENCE_NUMBER_OFFSET] << 8) & 0xFF) | 
+        return (((self.buffer[ICMP_ECHO_SEQUENCE_NUMBER_OFFSET] << 8) & 0xFFFF) | 
             (self.buffer[ICMP_ECHO_SEQUENCE_NUMBER_OFFSET + 1] & 0xFF));
     def set_payload(self, payload):
         """
@@ -499,7 +499,7 @@ class ICMPTimestampPacket(ICMPPacket):
         """
         Gets the ICMP timestamp sequence
         """
-        return (((self.buffer[ICMP_TIMESTAMP_SEQUENCE_OFFSET] << 8) & 0xFF) | \
+        return (((self.buffer[ICMP_TIMESTAMP_SEQUENCE_OFFSET] << 8) & 0xFFFF) | \
             (self.buffer[ICMP_TIMESTAMP_SEQUENCE_OFFSET + 1] & 0xFF));
     def get_originate_timestamp(self):
         """
@@ -628,7 +628,7 @@ class ICMPInformationPacket(ICMPPacket):
         """
         Gets the ICMP Echo sequence
         """
-        return (((self.buffer[ICMP_INFORMATION_SEQUENCE_NUMBER_OFFSET] << 8) & 0xFF) | 
+        return (((self.buffer[ICMP_INFORMATION_SEQUENCE_NUMBER_OFFSET] << 8) & 0xFFFF) | 
             (self.buffer[ICMP_INFORMATION_SEQUENCE_NUMBER_OFFSET + 1] & 0xFF));
     
 

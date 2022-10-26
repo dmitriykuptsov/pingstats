@@ -27,6 +27,8 @@ import matplotlib.pyplot as plt
 # Statistics
 import utils
 from utils import statistics
+# Logging functionality
+import logging
 
 __REFRESH_RATE__ = 1
 
@@ -46,6 +48,7 @@ class Main():
 
     def update(self, window = None):
         while True:
+            logging.debug("Updating the UI")
             for key in self.keys:
                 statuslbl = self.labels[key]
                 t = self.storage.get_last(key)
