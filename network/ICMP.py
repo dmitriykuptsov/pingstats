@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (C) 2019 Micromine
+# Copyright (C) 2022 Micromine
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -384,7 +384,7 @@ class ICMPEchoPacket(ICMPPacket):
         """
         Returns identifier
         """
-        return (((self.buffer[ICMP_ECHO_IDENTIFIER_OFFSET] << 8) & 0xFF) | 
+        return (((self.buffer[ICMP_ECHO_IDENTIFIER_OFFSET] << 8) & 0xFFFF) | 
             (self.buffer[ICMP_ECHO_IDENTIFIER_OFFSET + 1] & 0xFF));
     def set_identifier(self, identifier):
         """
@@ -481,7 +481,7 @@ class ICMPTimestampPacket(ICMPPacket):
         """
         Returns identifier
         """
-        return (((self.buffer[ICMP_TIMESTAMP_IDENTIFIER_OFFSET] << 8) & 0xFF) | 
+        return (((self.buffer[ICMP_TIMESTAMP_IDENTIFIER_OFFSET] << 8) & 0xFFFF) | 
             (self.buffer[ICMP_TIMESTAMP_IDENTIFIER_OFFSET + 1] & 0xFF));
     def set_identifier(self, identifier):
         """
@@ -505,9 +505,9 @@ class ICMPTimestampPacket(ICMPPacket):
         """
         Returns originate timestamp
         """
-        return ((self.buffer[ICMP_TIMESTAMP_ORIGINATE_OFFSET] << 24) & 0xFF) | \
-            ((self.buffer[ICMP_TIMESTAMP_ORIGINATE_OFFSET + 1] << 16) & 0xFF) | \
-            ((self.buffer[ICMP_TIMESTAMP_ORIGINATE_OFFSET + 2] << 8) & 0xFF) | \
+        return ((self.buffer[ICMP_TIMESTAMP_ORIGINATE_OFFSET] << 24) & 0xFFFFFFFF) | \
+            ((self.buffer[ICMP_TIMESTAMP_ORIGINATE_OFFSET + 1] << 16) & 0xFFFFFF) | \
+            ((self.buffer[ICMP_TIMESTAMP_ORIGINATE_OFFSET + 2] << 8) & 0xFFFF) | \
             ((self.buffer[ICMP_TIMESTAMP_ORIGINATE_OFFSET + 1]) & 0xFF);
     def set_originate_timestamp(self, timestamp):
         """
@@ -521,9 +521,9 @@ class ICMPTimestampPacket(ICMPPacket):
         """
         Returns receive timestamp
         """
-        return ((self.buffer[ICMP_TIMESTAMP_RECEIVE_OFFSET] << 24) & 0xFF) | \
-            ((self.buffer[ICMP_TIMESTAMP_RECEIVE_OFFSET + 1] << 16) & 0xFF) | \
-            ((self.buffer[ICMP_TIMESTAMP_RECEIVE_OFFSET + 2] << 8) & 0xFF) | \
+        return ((self.buffer[ICMP_TIMESTAMP_RECEIVE_OFFSET] << 24) & 0xFFFFFFFF) | \
+            ((self.buffer[ICMP_TIMESTAMP_RECEIVE_OFFSET + 1] << 16) & 0xFFFFFF) | \
+            ((self.buffer[ICMP_TIMESTAMP_RECEIVE_OFFSET + 2] << 8) & 0xFFFF) | \
             ((self.buffer[ICMP_TIMESTAMP_RECEIVE_OFFSET + 3]) & 0xFF);
     def set_receive_timestamp(self, timestamp):
         """
@@ -537,9 +537,9 @@ class ICMPTimestampPacket(ICMPPacket):
         """
         Returns receive timestamp
         """
-        return ((self.buffer[ICMP_TIMESTAMP_TRANSMIT_OFFSET] << 24) & 0xFF) | \
-            ((self.buffer[ICMP_TIMESTAMP_TRANSMIT_OFFSET + 1] << 16) & 0xFF) | \
-            ((self.buffer[ICMP_TIMESTAMP_TRANSMIT_OFFSET + 2] << 8) & 0xFF) | \
+        return ((self.buffer[ICMP_TIMESTAMP_TRANSMIT_OFFSET] << 24) & 0xFFFFFFFF) | \
+            ((self.buffer[ICMP_TIMESTAMP_TRANSMIT_OFFSET + 1] << 16) & 0xFFFFFF) | \
+            ((self.buffer[ICMP_TIMESTAMP_TRANSMIT_OFFSET + 2] << 8) & 0xFFFF) | \
             ((self.buffer[ICMP_TIMESTAMP_TRANSMIT_OFFSET + 3]) & 0xFF);
     def set_receive_timestamp(self, timestamp):
         """
@@ -610,7 +610,7 @@ class ICMPInformationPacket(ICMPPacket):
         """
         Returns identifier
         """
-        return (((self.buffer[ICMP_INFORMATION_IDENTIFIER_OFFSET] << 8) & 0xFF) | 
+        return (((self.buffer[ICMP_INFORMATION_IDENTIFIER_OFFSET] << 8) & 0xFFFF) | 
             (self.buffer[ICMP_INFORMATION_IDENTIFIER_OFFSET + 1] & 0xFF));
     def set_identifier(self, identifier):
         """
