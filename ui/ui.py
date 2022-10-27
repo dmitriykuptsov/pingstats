@@ -57,7 +57,7 @@ class Main():
                 self.lock.release()
                 if last_value[1] != math.inf:
                     try:
-                        btn["text"] = "Online " + str(round(t[1], 2))
+                        btn["text"] = "Online " + str(round(last_value[1], 2))
                     except:
                         pass
                     btn["bg"] = "#00FF00"
