@@ -23,14 +23,11 @@ class CyclicStorage():
         self.counters = {}
     def put(self, key, value, timestamp):
         if key not in self.storage.keys():
-            self.storage[key] = [[None, math.inf]] * int(self.max_records);
-            self.counters[key] = 0;
-        v = self.storage[key][self.counters[key] % self.max_records][0]
-        t = self.storage[key][self.counters[key] % self.max_records][1]
-        self.storage[key][self.counters[key] % self.max_records][0] = timestamp
-        self.storage[key][self.counters[key] % self.max_records][1] = value
+            self.storage[key] = [(None, math.inf)] * int(self.max_records);
+            self.counters[key] = -1;
         self.counters[key] += 1;
         self.counters[key] = self.counters[key] % self.max_records;
+        self.storage[key][self.counters[key] % self.max_records] = (timestamp, value)
     def set_counter(self, key, counter):
         self.counters[key] = counter;
     def get_counter(self, key):

@@ -65,7 +65,7 @@ icmp_socket.bind(("0.0.0.0", ICMP.ICMP_PROTOCOL_NUMBER));
 icmp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1);
 
 logging.basicConfig(
-	level=logging.DEBUG,
+	level=logging.CRITICAL,
 	format="%(asctime)s [%(levelname)s] %(message)s",
 	handlers=[
 		RotatingFileHandler("pingstats.log", maxBytes=20*1024*1024, backupCount=5),
@@ -177,6 +177,7 @@ def receive_loop():
                     lock.release();    
                     continue
                 logging.info("Got ICMP echo reply (seq %s) from %s in %s ms" % (sequences[host], host, (c-pending_requests.get(key, 0))))
+                #logging.info(storage.get_all(host))
                 # It might be so that the ICMP repsonse is too late and we don't have the record in db any more
                 logging.critical("Updating the storage....")
                 storage.put(host, (c - pending_requests[key])*1000, c);
@@ -188,7 +189,7 @@ def receive_loop():
                 logging.debug("Unsupported ICMP response")
 
 def gui_loop():
-    window = ui.Main(storage)
+    window = ui.Main(storage, lock)
     window.show();
 
 

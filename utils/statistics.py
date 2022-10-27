@@ -40,13 +40,21 @@ class Statistics():
                 start = False
                 prevTimestamp = timestamp
                 prevValue = value
-                continue
-            if (prevValue == math.inf and value != math.inf) or (prevValue != math.inf and value == math.inf):
-                if not gap:
-                    gap = True
+                if prevValue == math.inf:
                     gapStart = timestamp
-                else:
+                    gap = True
+                continue 
+            if (prevValue != math.inf and value == math.inf):
+                if not gap:
+                    prevTimestamp = timestamp
+                    gapStart = timestamp
+                    gap = True
+                prevValue = value
+            if (prevValue == math.inf and value != math.inf):
+                if gap:
                     gapValue = timestamp - gapStart
-                    stats.append(gapValue)
                     gap = False
+                    stats.append(gapValue)
+                prevValue = value
+        print(stats)
         return stats
