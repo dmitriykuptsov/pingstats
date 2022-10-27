@@ -29,6 +29,7 @@ class CyclicStorage():
         t = self.storage[key][self.counters[key] % self.max_records][1]
         self.storage[key][self.counters[key] % self.max_records][0] = timestamp
         self.storage[key][self.counters[key] % self.max_records][1] = value
+        self.counters[key] += 1;
         self.counters[key] = self.counters[key] % self.max_records;
     def set_counter(self, key, counter):
         self.counters[key] = counter;
