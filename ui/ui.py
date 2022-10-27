@@ -29,6 +29,10 @@ import utils
 from utils import statistics
 # Logging functionality
 import logging
+# Import subprocess stuff
+import subprocess
+# Font 
+import tkinter.font as font
 
 __REFRESH_RATE__ = 1
 
@@ -76,7 +80,13 @@ class Main():
         mtbf_data = statistics.Statistics.computeMeanTimeBetweenFailures(values)
         plt.hist(mtbf_data)
         plt.show()
-    
+
+    def runVNCViewer(self, key):
+        try:
+            subprocess.run(["config/vncviewer.exe", key])
+        except:
+            pass
+
     def show(self):
         self.window = Tk()
         self.window.state("zoomed")
@@ -84,30 +94,47 @@ class Main():
         cpos = 20;
         row_index = 1
         col_index = 0
+        num_columns = 6;
+        num_elems = 3;
         start = True;
+        myfont = font.Font(size=7)
         for key in self.keys:
             if start:
                 lbl = Label(self.window, text = "Host")
-                lbl.grid(row = 0, column = col_index % 14)
+                lbl.grid(row = 0, column = col_index % (num_columns*num_elems))
+                lbl["font"] = myfont
                 lbl = Label(self.window, text = "Status")
-                lbl.grid(row = 0, column = (col_index + 1) % 14)
+                lbl["font"] = myfont
+                lbl.grid(row = 0, column = (col_index + 1) % (num_columns*num_elems))
+                lbl = Label(self.window, text = "VNC")
+                lbl["font"] = myfont
+                lbl.grid(row = 0, column = (col_index + 2) % (num_columns*num_elems))
+                
             hostlbl = Label(self.window, text = key)
-            hostlbl.grid(row=row_index, column=col_index % 14)
+            hostlbl["font"] = myfont
+            hostlbl.grid(row=row_index, column=col_index % (num_columns*num_elems))
 
             if self.storage.get_last(key)[1] != math.inf:
                 btn = Button(self.window, bg='#00FF00', text = "Online " + str(round(self.storage.get_last(key)[1], 2)), command = lambda key=key: self.showMTBFGraph(key))
-                btn.grid(row = row_index, column = (col_index + 1) % 14)
+                btn.grid(row = row_index, column = (col_index + 1) % (num_columns*num_elems))
+                btn["font"] = myfont
                 self.labels[key] = btn
             else:
                 btn = Button(self.window, bg='#FF0000', text = "Offline", command = lambda key=key: self.showMTBFGraph(key))
-                btn.grid(row = row_index, column = (col_index + 1) % 14)
+                btn.grid(row = row_index, column = (col_index + 1) % (num_columns*num_elems))
+                btn["font"] = myfont
                 self.labels[key] = btn
+
+            btn = Button(self.window, text = "Conn.", command = lambda key=key: self.runVNCViewer(key))
+            btn.grid(row = row_index, column = (col_index + 2) % (num_columns*num_elems))
+            btn["font"] = myfont
             
             if row_index > 1:
                 start = False
-            col_index += 2
-            if col_index % 14 == 0 and col_index != 0:
+            col_index += num_elems
+            if col_index % (num_columns*num_elems) == 0 and col_index != 0:
                 row_index += 1
+
         redraw_thread = threading.Thread(target = self.update, args = (), daemon = True);
         redraw_thread.start();
         self.window.update()
