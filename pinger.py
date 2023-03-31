@@ -53,6 +53,8 @@ from utils import misc
 from ui import ui
 # impport garbage collector
 import gc
+# Import datetime object
+from datetime import datetime
 
 # Define MTU
 MTU = 1500
@@ -84,10 +86,13 @@ PROBE_INTERVAL = int(config["PROBE_INTERVAL"])
 MAX_SEQUENCE = int(config["MAX_SEQUENCE"])
 MAX_RECORDS = int(config["MAX_RECORDS"])
 REPORT_INTERVAL = int(config["REPORT_INTERVAL"])
+SEEN_HOSTS_LOG_FILE = config["SEEN_HOSTS_LOG_FILE"]
+REGISTER_INTERVAL = int(config["REGISTER_INTERVAL"])
 
 sequences = {}
 pending_requests = {}
 lock = 0;
+seen_ip_addresses = {}
 
 storage = CyclicStorage.CyclicStorage(MAX_RECORDS)
 logging.info("Starting PINGer");
@@ -100,6 +105,16 @@ c = time.time();
 for host in hosts:
     sequences[host] = 1;
     storage.put(host, math.inf, c);
+
+def register_loop():
+    while True:
+        lock.acquire()
+        fd = open(SEEN_HOSTS_LOG_FILE, "w")
+        for host in seen_ip_addresses.keys():
+            fd.write(host + " " + seen_ip_addresses[host] + "\n")
+        fd.close()
+        lock.release()
+        time.sleep(REGISTER_INTERVAL);
 
 def maintanance_loop():
     while True:
@@ -172,6 +187,8 @@ def receive_loop():
             elif icmp_packet.get_type() == ICMP.ICMP_ECHO_REPLY_TYPE:
                 key = host + "_" + str(icmp_packet.get_sequence())
                 lock.acquire()
+                ts = datetime.now()
+                seen_ip_addresses[host] = str(ts) 
                 if pending_requests.get(key, None) == None:
                     logging.critical("No key was found.... Deleted?..... %s" % (key))
                     lock.release();    
@@ -192,11 +209,12 @@ def gui_loop():
     window = ui.Main(storage, lock)
     window.show();
 
-
+register_thread = threading.Thread(target = register_loop, args = (), daemon = True);
 send_thread = threading.Thread(target = send_loop, args = (), daemon = True);
 receive_thread = threading.Thread(target = receive_loop, args = (), daemon = True);
 maintenance_thread = threading.Thread(target = maintanance_loop, args = (), daemon = True);
 
+register_thread.start();
 send_thread.start();
 receive_thread.start();
 maintenance_thread.start();
