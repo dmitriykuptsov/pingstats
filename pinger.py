@@ -109,10 +109,13 @@ for host in hosts:
 def register_loop():
     while True:
         lock.acquire()
-        fd = open(SEEN_HOSTS_LOG_FILE, "w")
-        for host in seen_ip_addresses.keys():
-            fd.write(host + " " + seen_ip_addresses[host] + "\n")
-        fd.close()
+        try:
+            fd = open(SEEN_HOSTS_LOG_FILE, "w")
+            for host in seen_ip_addresses.keys():
+                fd.write(host + " " + seen_ip_addresses[host] + "\n")
+            fd.close()
+        except:
+            pass
         lock.release()
         time.sleep(REGISTER_INTERVAL);
 
